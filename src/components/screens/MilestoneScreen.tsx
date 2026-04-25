@@ -53,8 +53,7 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
           <span
             key={i}
             className="absolute text-2xl animate-sparkle-float"
-            // @ts-expect-error css inline
-            style={{ ...s, animationDelay: s.d, color: "hsl(var(--gold-light))" }}
+            style={{ ...(s as React.CSSProperties), animationDelay: s.d, color: "hsl(var(--gold-light))" }}
           >
             ✦
           </span>
