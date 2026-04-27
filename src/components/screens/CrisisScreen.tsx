@@ -152,7 +152,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
         </button>
 
         <div className="flex-1 flex flex-col justify-center gap-7 text-white">
-          {loss.daysLost >= 1 && (
+          {loss.daysLost >= 1 ? (
             <div className="space-y-3">
               <p className="text-[40px] font-extrabold leading-[1.1]">
                 지금 마시면<br />
@@ -160,12 +160,28 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
                   {loss.daysLost}일이 0이 돼요.
                 </span>
               </p>
+              {loss.daysLost >= 7 && (
+                <p className="text-base text-white/70">
+                  {loss.daysLost}일 동안 {loss.daysLost}번의 맑은 아침을 되찾았는데,
+                  <br />그게 오늘 밤 한 번에 사라져요.
+                </p>
+              )}
               {loss.daysToNextMilestone !== null && loss.daysToNextMilestone <= 14 && (
                 <p className="text-base text-white/70">
                   다음 마일스톤 <b className="text-white">{loss.nextMilestoneDay}일</b>까지
                   {" "}딱 <b className="text-white">{loss.daysToNextMilestone}일</b> 남았는데요.
                 </p>
               )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[36px] font-extrabold leading-[1.15]">
+                여기서 마시면<br />
+                <span style={{ color: "hsl(var(--coral))" }}>다시 0일부터예요.</span>
+              </p>
+              <p className="text-base text-white/70">
+                시작이 가장 어려워요. 오늘 한 번만 더 버텨봐요.
+              </p>
             </div>
           )}
 
@@ -176,13 +192,23 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
               </span>
               {" "}이 오늘 밤 사라져요.
             </p>
-            {state.totalSaved > 0 && (
+            {state.totalSaved > 0 ? (
               <p className="text-sm text-white/55">
-                지금까지 모은 {formatWon(state.totalSaved)}에 더해질 수 있던 돈이에요.
+                지금까지 {formatWon(state.totalSaved)} 모았어요.
+                {state.totalSaved >= loss.moneyLost
+                  ? ` 오늘 마시면 그중 ${Math.round((loss.moneyLost / state.totalSaved) * 100)}%가 한 번에 날아가요.`
+                  : " 한 번의 술자리가 그 모든 노력보다 비싸요."}
+              </p>
+            ) : (
+              <p className="text-sm text-white/55">
+                오늘 안 마시면 그게 첫 5,000원이 돼요.
               </p>
             )}
             <p className="text-sm text-white/55">
               주 2회 × 1년이면 <b className="text-white/85">{formatWon(loss.yearlyProjection)}</b>.
+              {state.totalSaved > 0 && loss.daysLost > 0 && (
+                <> 지금 페이스면 1년 뒤 <b className="text-white/85">{formatWon(Math.round((state.totalSaved / Math.max(loss.daysLost, 1)) * 365))}</b>.</>
+              )}
             </p>
           </div>
 
