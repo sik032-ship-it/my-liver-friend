@@ -6,6 +6,7 @@ import { MilestonesListScreen } from "@/components/screens/MilestonesListScreen"
 import { CrisisScreen } from "@/components/screens/CrisisScreen";
 import {
   isMilestone,
+  loadCrisisSession,
   loadState,
   recordMilestone,
   saveState,
@@ -27,8 +28,12 @@ const Index = () => {
     const loaded = loadState();
     setState(loaded);
 
-    // Restore view if user already checked in today
-    if (loaded.lastCheckInDate === todayKey() && loaded.lastView) {
+    // 1) 위기 세션이 진행 중이면 무조건 그 화면으로 복원
+    const crisis = loadCrisisSession();
+    if (crisis) {
+      setView("crisis");
+    } else if (loaded.lastCheckInDate === todayKey() && loaded.lastView) {
+      // 2) 오늘 이미 체크인 했으면 마지막 화면 복원
       setView(loaded.lastView);
     } else {
       setView("main");

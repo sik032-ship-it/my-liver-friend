@@ -138,3 +138,66 @@ export const recordMilestone = (day: number, saved: number) => {
   list.push({ day, date: todayKey(), saved });
   localStorage.setItem(MILESTONE_HISTORY_KEY, JSON.stringify(list));
 };
+
+// ---------- Crisis loss projection ----------
+export type CrisisLoss = {
+  daysLost: number;          // streak 손실
+  moneyLost: number;         // 오늘 밤 사라지는 돈 (한 번의 음주 비용)
+  nextMilestoneDay: number | null;
+  daysToNextMilestone: number | null;
+  weeklyProjection: number;  // 일주일 환산
+  yearlyProjection: number;  // 연환산 (주 2회 가정)
+  hoursInvested: number;     // 30초 체크인 × streak (체감용 노력 시간)
+};
+
+const SINGLE_DRINK_COST = 50000; // 한 번 술자리 평균 비용 (만원 단위 체감)
+
+export const computeCrisisLoss = (state: SobrietyState): CrisisLoss => {
+  const streak = state.streak;
+  const next = nextMilestone(state.totalDays);
+  return {
+    daysLost: streak,
+    moneyLost: SINGLE_DRINK_COST,
+    nextMilestoneDay: next,
+    daysToNextMilestone: next ? next - state.totalDays : null,
+    weeklyProjection: SINGLE_DRINK_COST * 2,
+    yearlyProjection: SINGLE_DRINK_COST * 2 * 52,
+    hoursInvested: Math.round((streak * 30) / 60), // 분 단위
+  };
+};
+
+// ---------- Crisis session (resumable) ----------
+export const CRISIS_SESSION_KEY = "sobriety_crisis_session_v1";
+
+export type CrisisStep = "truth" | "alt" | "timer" | "won" | "fail";
+
+export type CrisisSession = {
+  step: CrisisStep;
+  truthIdx: number;
+  altIdx: number;
+  // Timer is anchor-based — survives backgrounding
+  timerEndAt: number | null; // epoch ms when 5min ends
+  startedAt: number;         // epoch ms when crisis opened
+};
+
+export const loadCrisisSession = (): CrisisSession | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(CRISIS_SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as CrisisSession;
+    // Discard sessions older than 1 hour
+    if (Date.now() - s.startedAt > 60 * 60 * 1000) return null;
+    return s;
+  } catch {
+    return null;
+  }
+};
+
+export const saveCrisisSession = (s: CrisisSession) => {
+  localStorage.setItem(CRISIS_SESSION_KEY, JSON.stringify(s));
+};
+
+export const clearCrisisSession = () => {
+  localStorage.removeItem(CRISIS_SESSION_KEY);
+};
