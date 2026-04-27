@@ -62,6 +62,8 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
   const [now, setNow] = useState(Date.now());
   const [confirmingFail, setConfirmingFail] = useState(false);
   const [canContinue, setCanContinue] = useState(false);
+  const wonCaptureRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
 
   const truth = HARD_TRUTHS[sessionRef.current.truthIdx];
   const alt = ALTERNATIVES[sessionRef.current.altIdx];
