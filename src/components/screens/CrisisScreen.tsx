@@ -136,6 +136,47 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
     onRelapse();
   };
 
+  const saveWinImage = async () => {
+    if (!wonCaptureRef.current || saving) return;
+    setSaving(true);
+    try {
+      const canvas = await html2canvas(wonCaptureRef.current, {
+        backgroundColor: "#FFF8F0",
+        scale: 2,
+        useCORS: true,
+      });
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const fontSize = 20 * 2;
+        ctx.font = `bold ${fontSize}px Pretendard, sans-serif`;
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.textAlign = "center";
+        ctx.fillText("간 지키고 돈 벌고", canvas.width / 2, canvas.height - 24);
+      }
+      const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/png"));
+      if (!blob) throw new Error("blob fail");
+      const file = new File([blob], `crisis-win-${state.streak}days.png`, { type: "image/png" });
+      const navAny = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (navAny.share && navAny.canShare && navAny.canShare({ files: [file] })) {
+        await navAny.share({ files: [file], title: "5분의 승리" });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("이미지 저장에 실패했어요");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ---------- Step 1: 현실 직면 ----------
   if (step === "truth") {
     return (
