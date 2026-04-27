@@ -120,7 +120,9 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
 
         <div className="relative h-full w-full flex flex-col items-center justify-between px-7 py-7">
           <div className="self-stretch flex items-center justify-between">
-            <p className="text-[11px] font-bold tracking-[0.3em] text-foreground/60">SOBER · DAY</p>
+            <p className="text-[11px] font-bold tracking-[0.3em] text-foreground/60">
+              {day === 1 ? "FIRST · SIGNAL" : "SOBER · DAY"}
+            </p>
             <p className="text-[11px] font-bold tracking-wider mint-text">CLEAN ✦</p>
           </div>
 
@@ -132,7 +134,7 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
               {day}
             </p>
             <p className="mt-2 text-[15px] font-bold text-foreground/75 tracking-wide">
-              days alcohol-free
+              {day === 1 ? "the first signal sent" : "days alcohol-free"}
             </p>
           </div>
 
@@ -159,9 +161,8 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
         className="mt-6 w-full h-14 rounded-2xl bg-gradient-gold text-white font-bold shadow-gold active:scale-[0.98] transition flex items-center justify-center gap-2"
       >
         <Share2 size={18} strokeWidth={2.6} />
-        {day}일 달성 공유하기
+        {milestoneTitle(day)} 공유하기
       </button>
-
       {next ? (
         <button onClick={onClose} className="mt-3 w-full text-sm font-semibold text-foreground/70 py-2">
           다음 목표: {next}일 →
