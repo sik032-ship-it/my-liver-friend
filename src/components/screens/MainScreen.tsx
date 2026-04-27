@@ -1,12 +1,15 @@
-import { useState } from "react";
-import { Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Heart, Trophy } from "lucide-react";
 import { LiverMascot } from "@/components/LiverMascot";
 import {
-  bodyChange,
   companionCount,
   currentGift,
   formatWon,
   healthStage,
+  isRewardedToday,
+  pickBodyChange,
+  recordImpression,
+  recordReward,
   recoveryProgress,
   SobrietyState,
   timeGreeting,
@@ -27,9 +30,20 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
   const stage = healthStage(day);
   const gift = currentGift(day);
   const { active, checkedIn } = companionCount();
-  const change = bodyChange(day);
+  const [change] = useState(() => pickBodyChange(day));
+  const [liked, setLiked] = useState(() => isRewardedToday(change.id));
   const recovery = recoveryProgress(day);
   const recoveryPct = Math.round(recovery * 100);
+
+  useEffect(() => {
+    recordImpression(change.id);
+  }, [change.id]);
+
+  const handleLike = () => {
+    if (liked) return;
+    recordReward(change.id);
+    setLiked(true);
+  };
 
   return (
     <div className="app-shell px-5 pt-12 pb-12" style={{ background: "hsl(var(--cream))" }}>
@@ -104,7 +118,23 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
       <div className="space-y-3">
         {/* 오늘의 변화 (placebo) */}
         <div className="surface-card rounded-2xl p-5">
-          <p className="text-[11px] text-mint-deep font-bold mb-2 tracking-wider">오늘 몸에서</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] text-mint-deep font-bold tracking-wider">오늘 몸에서</p>
+            <button
+              onClick={handleLike}
+              aria-label="이 메시지 공감"
+              className={`size-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+                liked ? "bg-coral/15" : "bg-muted hover:bg-muted/70"
+              }`}
+            >
+              <Heart
+                size={16}
+                strokeWidth={2.4}
+                className={liked ? "fill-coral" : ""}
+                style={{ color: liked ? "hsl(var(--coral))" : "hsl(var(--muted-foreground))" }}
+              />
+            </button>
+          </div>
           <p className="text-[16px] font-extrabold leading-snug text-foreground/95">
             {change.headline}
           </p>
