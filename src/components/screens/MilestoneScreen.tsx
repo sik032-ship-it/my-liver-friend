@@ -1,8 +1,22 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import { Check, Share2 } from "lucide-react";
 import { LiverMascot } from "@/components/LiverMascot";
 import { Confetti } from "@/components/Confetti";
-import { formatWon, nextMilestone, SobrietyState } from "@/lib/sobriety";
+import {
+  formatWon,
+  milestoneCaptions,
+  nextMilestone,
+  ShareCaption,
+  SobrietyState,
+} from "@/lib/sobriety";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 interface Props {
   state: SobrietyState;
@@ -13,54 +27,70 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
   const day = state.totalDays;
   const next = nextMilestone(day);
   const captureRef = useRef<HTMLDivElement>(null);
-  const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const captions = useMemo(() => milestoneCaptions(day, state.totalSaved), [day, state.totalSaved]);
+  const [pickedId, setPickedId] = useState<string>(captions[0].id);
 
-  const share = async () => {
-    const text = `${day}일 연속 금주 달성 ✦\n절약 ${formatWon(state.totalSaved)}\n간 지키고 돈 벌고`;
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else {
-        await navigator.clipboard.writeText(text);
-        alert("기록이 복사됐어요");
-      }
-    } catch {}
+  const captureBlob = async (): Promise<{ blob: Blob; file: File } | null> => {
+    if (!captureRef.current) return null;
+    const canvas = await html2canvas(captureRef.current, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+    });
+    const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/png"));
+    if (!blob) return null;
+    return {
+      blob,
+      file: new File([blob], `sober-day-${day}.png`, { type: "image/png" }),
+    };
   };
 
-  const saveAsImage = async () => {
-    if (!captureRef.current || saving) return;
-    setSaving(true);
+  const downloadFallback = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  // 자동 공유: 캡처 → 캡션 시트 → 선택 → navigator.share(file+text)
+  const openShareSheet = () => setSheetOpen(true);
+
+  const confirmShare = async (caption: ShareCaption) => {
+    if (sharing) return;
+    setSharing(true);
     try {
-      const canvas = await html2canvas(captureRef.current, {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true,
-      });
-
-      const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/png"));
-      if (!blob) throw new Error("blob fail");
-
-      const file = new File([blob], `sobriety-${day}days.png`, { type: "image/png" });
-
-      // Try native share with file
+      const out = await captureBlob();
+      if (!out) throw new Error("capture fail");
       const navAny = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-      if (navAny.share && navAny.canShare && navAny.canShare({ files: [file] })) {
-        await navAny.share({ files: [file], title: `${day}일 금주 달성` });
+      const shareData: ShareData = {
+        title: `금주 ${day}일 달성`,
+        text: caption.text,
+        files: [out.file],
+      };
+      if (navAny.share && navAny.canShare && navAny.canShare(shareData)) {
+        await navAny.share(shareData);
+      } else if (navAny.share) {
+        // 파일 공유 미지원 환경 — 텍스트만 공유 + 이미지는 다운로드
+        await navAny.share({ title: shareData.title, text: caption.text });
+        downloadFallback(out.blob, out.file.name);
       } else {
-        // Fallback download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        // 완전 미지원 — 클립보드 + 다운로드
+        try { await navigator.clipboard.writeText(caption.text); } catch {}
+        downloadFallback(out.blob, out.file.name);
+        alert("이미지를 저장하고 캡션을 복사했어요");
       }
+      setSheetOpen(false);
     } catch (e) {
       console.error(e);
-      alert("이미지 저장에 실패했어요");
+      alert("공유에 실패했어요");
     } finally {
-      setSaving(false);
+      setSharing(false);
     }
   };
 
