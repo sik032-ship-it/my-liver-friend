@@ -6,6 +6,7 @@ import { Confetti } from "@/components/Confetti";
 import {
   formatWon,
   milestoneCaptions,
+  milestoneTitle,
   nextMilestone,
   ShareCaption,
   SobrietyState,
