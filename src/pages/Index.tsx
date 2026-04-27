@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { MainScreen } from "@/components/screens/MainScreen";
 import { CheckInDoneScreen } from "@/components/screens/CheckInDoneScreen";
 import { MilestoneScreen } from "@/components/screens/MilestoneScreen";
+import { MilestonesListScreen } from "@/components/screens/MilestonesListScreen";
 import {
   isMilestone,
   loadState,
+  recordMilestone,
   saveState,
   SAVE_PER_DAY,
   SobrietyState,
@@ -12,9 +14,11 @@ import {
   LastView,
 } from "@/lib/sobriety";
 
+type View = LastView | "milestones-list";
+
 const Index = () => {
   const [state, setState] = useState<SobrietyState | null>(null);
-  const [view, setView] = useState<LastView>("main");
+  const [view, setView] = useState<View>("main");
   const [alreadyToday, setAlreadyToday] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -46,10 +50,13 @@ const Index = () => {
 
   if (!state) return null;
 
-  const updateView = (v: LastView, nextState?: SobrietyState) => {
+  const updateView = (v: View, nextState?: SobrietyState) => {
     setView(v);
     const base = nextState ?? state;
-    const merged: SobrietyState = { ...base, lastView: v };
+    // Only persist LastView types
+    const persistView: LastView =
+      v === "milestones-list" ? "main" : (v as LastView);
+    const merged: SobrietyState = { ...base, lastView: persistView };
     setState(merged);
     saveState(merged);
   };
@@ -68,7 +75,11 @@ const Index = () => {
       totalSaved: state.totalSaved + SAVE_PER_DAY,
       lastCheckInDate: today,
     };
-    const nextView: LastView = isMilestone(next.totalDays) ? "milestone" : "done";
+    const reachedMilestone = isMilestone(next.totalDays);
+    if (reachedMilestone) {
+      recordMilestone(next.totalDays, next.totalSaved);
+    }
+    const nextView: LastView = reachedMilestone ? "milestone" : "done";
     updateView(nextView, next);
   };
 
@@ -84,11 +95,19 @@ const Index = () => {
       style={{ opacity: mounted ? 1 : 0 }}
     >
       {view === "main" && (
-        <MainScreen state={state} onCheckIn={handleCheckIn} onRelapse={handleRelapse} />
+        <MainScreen
+          state={state}
+          onCheckIn={handleCheckIn}
+          onRelapse={handleRelapse}
+          onOpenMilestones={() => setView("milestones-list")}
+        />
       )}
       {view === "done" && <CheckInDoneScreen state={state} onClose={() => updateView("main")} />}
       {view === "milestone" && (
         <MilestoneScreen state={state} onClose={() => updateView("main")} />
+      )}
+      {view === "milestones-list" && (
+        <MilestonesListScreen state={state} onBack={() => setView("main")} />
       )}
 
       {alreadyToday && (
