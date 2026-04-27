@@ -2,11 +2,14 @@ export const STORAGE_KEY = "sobriety_state_v1";
 export const SAVE_PER_DAY = 5000;
 export const MILESTONES = [7, 14, 30, 60, 100];
 
+export type LastView = "main" | "done" | "milestone";
+
 export type SobrietyState = {
   streak: number;
   totalDays: number;
   totalSaved: number;
   lastCheckInDate: string | null; // YYYY-MM-DD
+  lastView?: LastView;
 };
 
 export const initialState: SobrietyState = {
@@ -14,6 +17,7 @@ export const initialState: SobrietyState = {
   totalDays: 0,
   totalSaved: 0,
   lastCheckInDate: null,
+  lastView: "main",
 };
 
 export const todayKey = () => {
