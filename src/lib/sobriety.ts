@@ -415,3 +415,27 @@ export const saveCrisisSession = (s: CrisisSession) => {
 export const clearCrisisSession = () => {
   localStorage.removeItem(CRISIS_SESSION_KEY);
 };
+
+// ---------- Milestone share captions ----------
+export type ShareCaption = { id: string; tone: string; text: string };
+
+export const milestoneCaptions = (day: number, totalSaved: number): ShareCaption[] => {
+  const won = formatWon(totalSaved);
+  return [
+    {
+      id: "humble",
+      tone: "담백",
+      text: `금주 ${day}일.\n작은 결정이 쌓여서 ${won}이 됐어요.\n오늘도 한 잔 대신 한 걸음.\n#간지키고돈벌고 #금주${day}일`,
+    },
+    {
+      id: "proud",
+      tone: "당당",
+      text: `${day}일 동안 단 한 잔도 안 마셨다.\n그 사이 모인 돈 ${won}, 되찾은 아침 ${day}번.\n나는 내가 결정한 사람이 된다.\n#sober #금주챌린지 #간지키고돈벌고`,
+    },
+    {
+      id: "playful",
+      tone: "위트",
+      text: `Day ${day} clean ✦\n간이 박수치고 통장이 웃는 중\n저축 ${won} · 컨디션 +∞\n#오늘도무알콜 #간지키고돈벌고`,
+    },
+  ];
+};
