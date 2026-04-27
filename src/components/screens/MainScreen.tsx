@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Trophy } from "lucide-react";
 import { LiverMascot } from "@/components/LiverMascot";
 import {
+  bodyChange,
   companionCount,
   currentGift,
-  dayMessage,
   formatWon,
   healthStage,
+  recoveryProgress,
   SobrietyState,
   timeGreeting,
   todayLabel,
@@ -26,6 +27,9 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
   const stage = healthStage(day);
   const gift = currentGift(day);
   const { active, checkedIn } = companionCount();
+  const change = bodyChange(day);
+  const recovery = recoveryProgress(day);
+  const recoveryPct = Math.round(recovery * 100);
 
   return (
     <div className="app-shell px-5 pt-12 pb-12" style={{ background: "hsl(var(--cream))" }}>
