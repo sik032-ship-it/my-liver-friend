@@ -17,9 +17,10 @@ interface Props {
   onCheckIn: () => void;
   onRelapse: () => void;
   onOpenMilestones: () => void;
+  onCrisis: () => void;
 }
 
-export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones }: Props) => {
+export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCrisis }: Props) => {
   const [confirming, setConfirming] = useState(false);
   const day = state.totalDays;
   const stage = healthStage(day);
@@ -106,11 +107,20 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones }: Pr
         오늘도 안 마셨어요
       </button>
 
+      {/* Crisis mode CTA */}
+      <button
+        onClick={onCrisis}
+        className="mt-3 w-full h-12 rounded-2xl bg-coral/10 border border-coral/40 text-coral-deep text-sm font-bold active:scale-[0.98] transition-transform"
+        style={{ color: "hsl(var(--coral-deep))" }}
+      >
+        🆘 지금 마시고 싶어요
+      </button>
+
       {/* Relapse */}
       {!confirming ? (
         <button
           onClick={() => setConfirming(true)}
-          className="mt-4 w-full text-sm text-muted-foreground underline-offset-4 hover:underline"
+          className="mt-3 w-full text-sm text-muted-foreground underline-offset-4 hover:underline"
         >
           오늘 마셨어요
         </button>

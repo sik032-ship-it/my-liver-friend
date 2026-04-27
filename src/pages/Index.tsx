@@ -3,6 +3,7 @@ import { MainScreen } from "@/components/screens/MainScreen";
 import { CheckInDoneScreen } from "@/components/screens/CheckInDoneScreen";
 import { MilestoneScreen } from "@/components/screens/MilestoneScreen";
 import { MilestonesListScreen } from "@/components/screens/MilestonesListScreen";
+import { CrisisScreen } from "@/components/screens/CrisisScreen";
 import {
   isMilestone,
   loadState,
@@ -14,7 +15,7 @@ import {
   LastView,
 } from "@/lib/sobriety";
 
-type View = LastView | "milestones-list";
+type View = LastView | "milestones-list" | "crisis";
 
 const Index = () => {
   const [state, setState] = useState<SobrietyState | null>(null);
@@ -55,7 +56,7 @@ const Index = () => {
     const base = nextState ?? state;
     // Only persist LastView types
     const persistView: LastView =
-      v === "milestones-list" ? "main" : (v as LastView);
+      v === "milestones-list" || v === "crisis" ? "main" : (v as LastView);
     const merged: SobrietyState = { ...base, lastView: persistView };
     setState(merged);
     saveState(merged);
@@ -100,6 +101,18 @@ const Index = () => {
           onCheckIn={handleCheckIn}
           onRelapse={handleRelapse}
           onOpenMilestones={() => setView("milestones-list")}
+          onCrisis={() => setView("crisis")}
+        />
+      )}
+      {view === "crisis" && (
+        <CrisisScreen
+          state={state}
+          onSurvive={handleCheckIn}
+          onRelapse={() => {
+            handleRelapse();
+            setView("main");
+          }}
+          onClose={() => setView("main")}
         />
       )}
       {view === "done" && <CheckInDoneScreen state={state} onClose={() => updateView("main")} />}
