@@ -1,6 +1,7 @@
 export const STORAGE_KEY = "sobriety_state_v1";
-export const SAVE_PER_DAY = 5000;
-export const MILESTONES = [7, 14, 30, 60, 100];
+export const DEFAULT_SAVE_PER_DAY = 5000;
+// 첫 신호(1일) — Day 1 즉시 보상으로 이탈 방지
+export const MILESTONES = [1, 7, 14, 30, 60, 100];
 
 export type LastView = "main" | "done" | "milestone";
 
@@ -10,6 +11,9 @@ export type SobrietyState = {
   totalSaved: number;
   lastCheckInDate: string | null; // YYYY-MM-DD
   lastView?: LastView;
+  // 온보딩에서 계산된 1일 평균 절약액(원). 없으면 DEFAULT 사용.
+  savePerDay?: number;
+  onboarded?: boolean;
 };
 
 export const initialState: SobrietyState = {
@@ -18,7 +22,14 @@ export const initialState: SobrietyState = {
   totalSaved: 0,
   lastCheckInDate: null,
   lastView: "main",
+  onboarded: false,
 };
+
+// Backwards-compat: 기존 코드가 SAVE_PER_DAY를 직접 쓰는 곳을 위해 보존.
+export const SAVE_PER_DAY = DEFAULT_SAVE_PER_DAY;
+
+export const getSavePerDay = (s: Pick<SobrietyState, "savePerDay">) =>
+  s.savePerDay && s.savePerDay > 0 ? s.savePerDay : DEFAULT_SAVE_PER_DAY;
 
 export const todayKey = () => {
   const d = new Date();
