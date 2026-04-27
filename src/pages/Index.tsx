@@ -9,29 +9,50 @@ import {
   SAVE_PER_DAY,
   SobrietyState,
   todayKey,
+  LastView,
 } from "@/lib/sobriety";
-
-type View = "main" | "done" | "milestone";
 
 const Index = () => {
   const [state, setState] = useState<SobrietyState | null>(null);
-  const [view, setView] = useState<View>("main");
+  const [view, setView] = useState<LastView>("main");
   const [alreadyToday, setAlreadyToday] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setState(loadState());
+    const loaded = loadState();
+    setState(loaded);
+
+    // Restore view if user already checked in today
+    if (loaded.lastCheckInDate === todayKey() && loaded.lastView) {
+      setView(loaded.lastView);
+    } else {
+      setView("main");
+    }
+
+    // Trigger fade-in next tick
+    requestAnimationFrame(() => setMounted(true));
+
     document.title = "간 지키고 돈 벌고 — 금주 챌린지";
     const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute("content", "매일 30초 체크인으로 금주 여정을 즐기세요. 간을 지키고, 돈을 모으는 매일의 기록.");
+    const desc = "매일 30초 체크인으로 금주 여정을 즐기세요. 간을 지키고, 돈을 모으는 매일의 기록.";
+    if (meta) meta.setAttribute("content", desc);
     else {
       const m = document.createElement("meta");
       m.name = "description";
-      m.content = "매일 30초 체크인으로 금주 여정을 즐기세요. 간을 지키고, 돈을 모으는 매일의 기록.";
+      m.content = desc;
       document.head.appendChild(m);
     }
   }, []);
 
   if (!state) return null;
+
+  const updateView = (v: LastView, nextState?: SobrietyState) => {
+    setView(v);
+    const base = nextState ?? state;
+    const merged: SobrietyState = { ...base, lastView: v };
+    setState(merged);
+    saveState(merged);
+  };
 
   const handleCheckIn = () => {
     const today = todayKey();
@@ -41,14 +62,14 @@ const Index = () => {
       return;
     }
     const next: SobrietyState = {
+      ...state,
       streak: state.streak + 1,
       totalDays: state.totalDays + 1,
       totalSaved: state.totalSaved + SAVE_PER_DAY,
       lastCheckInDate: today,
     };
-    setState(next);
-    saveState(next);
-    setView(isMilestone(next.totalDays) ? "milestone" : "done");
+    const nextView: LastView = isMilestone(next.totalDays) ? "milestone" : "done";
+    updateView(nextView, next);
   };
 
   const handleRelapse = () => {
@@ -58,13 +79,16 @@ const Index = () => {
   };
 
   return (
-    <main>
+    <main
+      className="transition-opacity duration-500"
+      style={{ opacity: mounted ? 1 : 0 }}
+    >
       {view === "main" && (
         <MainScreen state={state} onCheckIn={handleCheckIn} onRelapse={handleRelapse} />
       )}
-      {view === "done" && <CheckInDoneScreen state={state} onClose={() => setView("main")} />}
+      {view === "done" && <CheckInDoneScreen state={state} onClose={() => updateView("main")} />}
       {view === "milestone" && (
-        <MilestoneScreen state={state} onClose={() => setView("main")} />
+        <MilestoneScreen state={state} onClose={() => updateView("main")} />
       )}
 
       {alreadyToday && (
