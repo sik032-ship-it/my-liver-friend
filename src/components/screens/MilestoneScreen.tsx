@@ -154,17 +154,10 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
       </div>
 
       <button
-        onClick={saveAsImage}
-        disabled={saving}
-        className="mt-6 w-full h-14 rounded-2xl bg-foreground text-background font-bold active:scale-[0.98] transition disabled:opacity-60"
+        onClick={openShareSheet}
+        className="mt-6 w-full h-14 rounded-2xl bg-gradient-gold text-white font-bold shadow-gold active:scale-[0.98] transition flex items-center justify-center gap-2"
       >
-        {saving ? "저장 중..." : "이미지로 저장하기"}
-      </button>
-
-      <button
-        onClick={share}
-        className="mt-3 w-full h-14 rounded-2xl bg-gradient-gold text-white font-bold shadow-gold active:scale-[0.98] transition"
-      >
+        <Share2 size={18} strokeWidth={2.6} />
         {day}일 달성 공유하기
       </button>
 
@@ -177,6 +170,73 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
           계속 이어가기 ✿
         </button>
       )}
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-[28px] border-0 px-5 pt-6 pb-7 max-h-[88vh] overflow-y-auto">
+          <SheetHeader className="text-left mb-4">
+            <SheetTitle className="text-[20px] font-extrabold tracking-tight">
+              어떤 톤으로 공유할까요?
+            </SheetTitle>
+            <SheetDescription className="text-[13px] text-muted-foreground">
+              이미지는 자동으로 함께 첨부돼요.
+            </SheetDescription>
+          </SheetHeader>
+
+          <ul className="space-y-3">
+            {captions.map((c) => {
+              const picked = pickedId === c.id;
+              return (
+                <li key={c.id}>
+                  <button
+                    onClick={() => setPickedId(c.id)}
+                    className={`w-full text-left rounded-2xl p-4 border transition-all ${
+                      picked
+                        ? "border-mint-deep bg-mint-soft/60"
+                        : "border-border bg-card hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-[11px] font-bold tracking-wider ${picked ? "mint-text" : "text-muted-foreground"}`}>
+                        {c.tone.toUpperCase()}
+                      </span>
+                      {picked && (
+                        <span className="size-5 rounded-full bg-gradient-mint flex items-center justify-center">
+                          <Check size={12} className="text-white" strokeWidth={3} />
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[13.5px] leading-relaxed whitespace-pre-line text-foreground/90">
+                      {c.text}
+                    </p>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          <button
+            onClick={() => {
+              const c = captions.find((x) => x.id === pickedId) ?? captions[0];
+              confirmShare(c);
+            }}
+            disabled={sharing}
+            className="mt-5 w-full h-14 rounded-2xl bg-foreground text-background font-bold active:scale-[0.98] transition disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {sharing ? "준비 중..." : (
+              <>
+                <Share2 size={18} strokeWidth={2.6} />
+                이 캡션으로 공유
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => setSheetOpen(false)}
+            className="mt-2 w-full text-[13px] text-muted-foreground py-2"
+          >
+            닫기
+          </button>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
