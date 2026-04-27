@@ -100,33 +100,35 @@ const Index = () => {
       className="transition-opacity duration-500"
       style={{ opacity: mounted ? 1 : 0 }}
     >
-      {view === "main" && (
-        <MainScreen
-          state={state}
-          onCheckIn={handleCheckIn}
-          onRelapse={handleRelapse}
-          onOpenMilestones={() => setView("milestones-list")}
-          onCrisis={() => setView("crisis")}
-        />
-      )}
-      {view === "crisis" && (
-        <CrisisScreen
-          state={state}
-          onSurvive={handleCheckIn}
-          onRelapse={() => {
-            handleRelapse();
-            setView("main");
-          }}
-          onClose={() => setView("main")}
-        />
-      )}
-      {view === "done" && <CheckInDoneScreen state={state} onClose={() => updateView("main")} />}
-      {view === "milestone" && (
-        <MilestoneScreen state={state} onClose={() => updateView("main")} />
-      )}
-      {view === "milestones-list" && (
-        <MilestonesListScreen state={state} onBack={() => setView("main")} />
-      )}
+      <div key={view} className="view-enter">
+        {view === "main" && (
+          <MainScreen
+            state={state}
+            onCheckIn={handleCheckIn}
+            onRelapse={handleRelapse}
+            onOpenMilestones={() => setView("milestones-list")}
+            onCrisis={() => setView("crisis")}
+          />
+        )}
+        {view === "crisis" && (
+          <CrisisScreen
+            state={state}
+            onSurvive={handleCheckIn}
+            onRelapse={() => {
+              handleRelapse();
+              setView("main");
+            }}
+            onClose={() => setView("main")}
+          />
+        )}
+        {view === "done" && <CheckInDoneScreen state={state} onClose={() => updateView("main")} />}
+        {view === "milestone" && (
+          <MilestoneScreen state={state} onClose={() => updateView("main")} />
+        )}
+        {view === "milestones-list" && (
+          <MilestonesListScreen state={state} onBack={() => setView("main")} />
+        )}
+      </div>
 
       {alreadyToday && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full bg-foreground text-background text-sm font-semibold shadow-card animate-fade-in">
