@@ -1,6 +1,7 @@
 export const STORAGE_KEY = "sobriety_state_v1";
-export const SAVE_PER_DAY = 5000;
-export const MILESTONES = [7, 14, 30, 60, 100];
+export const DEFAULT_SAVE_PER_DAY = 5000;
+// 첫 신호(1일) — Day 1 즉시 보상으로 이탈 방지
+export const MILESTONES = [1, 7, 14, 30, 60, 100];
 
 export type LastView = "main" | "done" | "milestone";
 
@@ -10,6 +11,9 @@ export type SobrietyState = {
   totalSaved: number;
   lastCheckInDate: string | null; // YYYY-MM-DD
   lastView?: LastView;
+  // 온보딩에서 계산된 1일 평균 절약액(원). 없으면 DEFAULT 사용.
+  savePerDay?: number;
+  onboarded?: boolean;
 };
 
 export const initialState: SobrietyState = {
@@ -18,7 +22,14 @@ export const initialState: SobrietyState = {
   totalSaved: 0,
   lastCheckInDate: null,
   lastView: "main",
+  onboarded: false,
 };
+
+// Backwards-compat: 기존 코드가 SAVE_PER_DAY를 직접 쓰는 곳을 위해 보존.
+export const SAVE_PER_DAY = DEFAULT_SAVE_PER_DAY;
+
+export const getSavePerDay = (s: Pick<SobrietyState, "savePerDay">) =>
+  s.savePerDay && s.savePerDay > 0 ? s.savePerDay : DEFAULT_SAVE_PER_DAY;
 
 export const todayKey = () => {
   const d = new Date();
@@ -55,7 +66,7 @@ export const nextMilestone = (n: number) => MILESTONES.find((m) => m > n) ?? nul
 
 export const dayMessage = (day: number): string => {
   const map: Record<number, string> = {
-    1: "첫 걸음을 떼었어요.",
+    1: "첫 신호를 보냈어요 ✦",
     3: "오늘 아침 머리가 맑았나요?",
     5: "손이 덜 떨리고, 숙면이 깊어지고 있어요.",
     7: "음식 맛이 달라진 거 느꼈어요?",
@@ -67,6 +78,17 @@ export const dayMessage = (day: number): string => {
     100: "100일. 이건 진짜 대단한 거예요.",
   };
   return map[day] ?? "오늘도 한 걸음 더.";
+};
+
+// 마일스톤 화면 타이틀 — Day 1은 "첫 신호"로 특별 처리
+export const milestoneTitle = (day: number): string => {
+  if (day === 1) return "첫 신호 ✦";
+  return `${day}일 달성`;
+};
+
+export const milestoneSubtitle = (day: number): string => {
+  if (day === 1) return "오늘 보낸 신호 하나가 내일을 바꿔요";
+  return "지금까지의 나, 그리고 다음의 나";
 };
 
 // 오늘 몸 안에서 일어나는 변화 — placebo 강화용 디테일
