@@ -192,70 +192,40 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
           닫기
         </button>
 
-        <div className="flex-1 flex flex-col justify-center gap-7 text-white">
+        <div className="flex-1 flex flex-col justify-center gap-10 text-white">
           {loss.daysLost >= 1 ? (
-            <div className="space-y-3">
-              <p className="text-[40px] font-extrabold leading-[1.1]">
-                지금 마시면<br />
-                <span style={{ color: "hsl(var(--coral))" }}>
-                  {loss.daysLost}일이 0이 돼요.
-                </span>
-              </p>
-              {loss.daysLost >= 7 && (
-                <p className="text-base text-white/70">
-                  {loss.daysLost}일 동안 {loss.daysLost}번의 맑은 아침을 되찾았는데,
-                  <br />그게 오늘 밤 한 번에 사라져요.
-                </p>
-              )}
-              {loss.daysToNextMilestone !== null && loss.daysToNextMilestone <= 14 && (
-                <p className="text-base text-white/70">
-                  다음 마일스톤 <b className="text-white">{loss.nextMilestoneDay}일</b>까지
-                  {" "}딱 <b className="text-white">{loss.daysToNextMilestone}일</b> 남았는데요.
-                </p>
-              )}
-            </div>
+            <p className="text-[44px] font-extrabold leading-[1.05]">
+              지금 마시면<br />
+              <span style={{ color: "hsl(var(--coral))" }}>
+                {loss.daysLost}일이 0이 돼요.
+              </span>
+            </p>
           ) : (
-            <div className="space-y-3">
-              <p className="text-[36px] font-extrabold leading-[1.15]">
-                여기서 마시면<br />
-                <span style={{ color: "hsl(var(--coral))" }}>다시 0일부터예요.</span>
-              </p>
-              <p className="text-base text-white/70">
-                시작이 가장 어려워요. 오늘 한 번만 더 버텨봐요.
-              </p>
-            </div>
+            <p className="text-[44px] font-extrabold leading-[1.05]">
+              여기서 마시면<br />
+              <span style={{ color: "hsl(var(--coral))" }}>다시 0일.</span>
+            </p>
           )}
 
-          <div className="space-y-2">
-            <p className="text-2xl font-bold leading-snug text-white/90">
-              <span style={{ color: "hsl(var(--gold-light))" }}>
-                {formatWon(loss.moneyLost)}
-              </span>
-              {" "}이 오늘 밤 사라져요.
-            </p>
-            {state.totalSaved > 0 ? (
-              <p className="text-sm text-white/55">
-                지금까지 {formatWon(state.totalSaved)} 모았어요.
-                {state.totalSaved >= loss.moneyLost
-                  ? ` 오늘 마시면 그중 ${Math.round((loss.moneyLost / state.totalSaved) * 100)}%가 한 번에 날아가요.`
-                  : " 한 번의 술자리가 그 모든 노력보다 비싸요."}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white/5 p-4">
+              <p className="text-[11px] tracking-wider text-white/50 mb-1">오늘 밤</p>
+              <p
+                className="font-extrabold leading-none"
+                style={{ color: "hsl(var(--gold-light))", fontSize: 26 }}
+              >
+                −{formatWon(loss.moneyLost)}
               </p>
-            ) : (
-              <p className="text-sm text-white/55">
-                오늘 안 마시면 그게 첫 5,000원이 돼요.
+            </div>
+            <div className="rounded-2xl bg-white/5 p-4">
+              <p className="text-[11px] tracking-wider text-white/50 mb-1">1년이면</p>
+              <p className="font-extrabold leading-none text-white" style={{ fontSize: 26 }}>
+                −{formatWon(loss.yearlyProjection)}
               </p>
-            )}
-            <p className="text-sm text-white/55">
-              주 2회 × 1년이면 <b className="text-white/85">{formatWon(loss.yearlyProjection)}</b>.
-              {state.totalSaved > 0 && loss.daysLost > 0 && (
-                <> 지금 페이스면 1년 뒤 <b className="text-white/85">{formatWon(Math.round((state.totalSaved / Math.max(loss.daysLost, 1)) * 365))}</b>.</>
-              )}
-            </p>
+            </div>
           </div>
 
-          <div className="h-px bg-white/15" />
-
-          <p className="text-xl font-semibold leading-relaxed text-white/95">
+          <p className="text-lg font-semibold leading-relaxed text-white/85">
             {truth}
           </p>
         </div>
