@@ -1,12 +1,15 @@
-import { useState } from "react";
-import { Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Heart, Trophy } from "lucide-react";
 import { LiverMascot } from "@/components/LiverMascot";
 import {
-  bodyChange,
   companionCount,
   currentGift,
   formatWon,
   healthStage,
+  isRewardedToday,
+  pickBodyChange,
+  recordImpression,
+  recordReward,
   recoveryProgress,
   SobrietyState,
   timeGreeting,
@@ -27,9 +30,20 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
   const stage = healthStage(day);
   const gift = currentGift(day);
   const { active, checkedIn } = companionCount();
-  const change = bodyChange(day);
+  const [change] = useState(() => pickBodyChange(day));
+  const [liked, setLiked] = useState(() => isRewardedToday(change.id));
   const recovery = recoveryProgress(day);
   const recoveryPct = Math.round(recovery * 100);
+
+  useEffect(() => {
+    recordImpression(change.id);
+  }, [change.id]);
+
+  const handleLike = () => {
+    if (liked) return;
+    recordReward(change.id);
+    setLiked(true);
+  };
 
   return (
     <div className="app-shell px-5 pt-12 pb-12" style={{ background: "hsl(var(--cream))" }}>
