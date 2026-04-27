@@ -69,6 +69,54 @@ export const dayMessage = (day: number): string => {
   return map[day] ?? "오늘도 한 걸음 더.";
 };
 
+// 오늘 몸 안에서 일어나는 변화 — placebo 강화용 디테일
+export const bodyChange = (day: number): { headline: string; detail: string } => {
+  if (day <= 1) return {
+    headline: "지금 이 순간 간이 쉬고 있어요",
+    detail: "마지막 술 8시간 후부터 간 효소 회복이 시작돼요.",
+  };
+  if (day <= 3) return {
+    headline: "수분이 다시 차오르고 있어요",
+    detail: "탈수가 풀리면서 두통과 피곤이 줄어드는 시기예요.",
+  };
+  if (day <= 6) return {
+    headline: "수면의 질이 회복 중이에요",
+    detail: "REM 수면이 정상화되면서 꿈이 선명해질 거예요.",
+  };
+  if (day <= 10) return {
+    headline: "간세포가 다시 자라고 있어요",
+    detail: "간은 재생 능력이 강한 장기예요. 매일 조금씩 회복해요.",
+  };
+  if (day <= 14) return {
+    headline: "피부 톤이 달라지는 시기예요",
+    detail: "혈류와 콜라겐 합성이 안정되면서 안색이 밝아져요.",
+  };
+  if (day <= 21) return {
+    headline: "뇌가 도파민 균형을 되찾고 있어요",
+    detail: "기분 기복이 줄고, 작은 일에도 기쁨을 느끼게 돼요.",
+  };
+  if (day <= 30) return {
+    headline: "지방간이 줄어드는 구간이에요",
+    detail: "한 달 금주만으로도 지방간 수치가 의미있게 떨어져요.",
+  };
+  if (day <= 60) return {
+    headline: "혈압과 콜레스테롤이 안정돼요",
+    detail: "심혈관 위험도가 본격적으로 낮아지는 시점이에요.",
+  };
+  return {
+    headline: "당신은 이제 '안 마시는 사람'이에요",
+    detail: "간은 거의 완전히 회복됐고, 이제 그걸 지키는 단계예요.",
+  };
+};
+
+// 간 회복도 (0~1) — 시각 게이지용. 100일 전후로 1.0에 수렴
+export const recoveryProgress = (day: number): number => {
+  if (day <= 0) return 0;
+  // 점근선: 100일에 약 0.95, 그 이후로 1에 수렴
+  const v = 1 - Math.exp(-day / 35);
+  return Math.min(1, v);
+};
+
 export const formatWon = (n: number) => `₩${n.toLocaleString("ko-KR")}`;
 
 export const timeGreeting = (): string => {

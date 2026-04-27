@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Trophy } from "lucide-react";
 import { LiverMascot } from "@/components/LiverMascot";
 import {
+  bodyChange,
   companionCount,
   currentGift,
-  dayMessage,
   formatWon,
   healthStage,
+  recoveryProgress,
   SobrietyState,
   timeGreeting,
   todayLabel,
@@ -26,6 +27,9 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
   const stage = healthStage(day);
   const gift = currentGift(day);
   const { active, checkedIn } = companionCount();
+  const change = bodyChange(day);
+  const recovery = recoveryProgress(day);
+  const recoveryPct = Math.round(recovery * 100);
 
   return (
     <div className="app-shell px-5 pt-12 pb-12" style={{ background: "hsl(var(--cream))" }}>
@@ -45,26 +49,52 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
         </button>
       </header>
 
-      {/* Hero card: Mascot + Day */}
-      <section className="surface-card-lg rounded-[28px] px-5 pt-6 pb-7 mb-3">
-        <div className="flex justify-center mb-1">
+      {/* Hero — 간(마스코트+회복게이지) + 돈(₩) + Day 동등 비중 */}
+      <section className="surface-card-lg rounded-[28px] px-5 pt-6 pb-6 mb-3">
+        <div className="flex justify-center mb-3">
           <div className="animate-bounce-soft">
-            <LiverMascot mood="happy" size={180} stage={stage} />
+            <LiverMascot mood="happy" size={140} stage={stage} />
           </div>
         </div>
-        <div className="text-center">
-          <p className="text-[13px] text-muted-foreground tracking-wide">금주</p>
-          <p
-            className="mint-text font-extrabold leading-none mt-1"
-            style={{ fontSize: 84, letterSpacing: "-0.04em" }}
-          >
-            {day}
-            <span className="text-2xl font-bold ml-1 align-top mint-text">일째</span>
-          </p>
-          <p className="mt-3 text-[15px] font-medium text-foreground/75">잘하고 있어요 ✿</p>
+
+        {/* 회복도 게이지 */}
+        <div className="px-2 mb-5">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <p className="text-[12px] font-semibold text-foreground/70">간 회복도</p>
+            <p className="text-[12px] font-extrabold mint-text tabular-nums">{recoveryPct}%</p>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-gradient-mint transition-all duration-700"
+              style={{ width: `${recoveryPct}%` }}
+            />
+          </div>
         </div>
+
+        {/* 두 개 숫자 — 동등 비중 */}
+        <div className="grid grid-cols-2 gap-3 px-1">
+          <div className="text-center">
+            <p className="text-[11px] font-semibold text-muted-foreground tracking-wide mb-1">모은 돈</p>
+            <p
+              className="gold-text font-extrabold leading-none tabular-nums"
+              style={{ fontSize: 30, letterSpacing: "-0.03em" }}
+            >
+              {formatWon(state.totalSaved)}
+            </p>
+          </div>
+          <div className="text-center border-l border-border/70">
+            <p className="text-[11px] font-semibold text-muted-foreground tracking-wide mb-1">맑은 날</p>
+            <p
+              className="mint-text font-extrabold leading-none tabular-nums"
+              style={{ fontSize: 30, letterSpacing: "-0.03em" }}
+            >
+              {day}<span className="text-base font-bold ml-0.5">일</span>
+            </p>
+          </div>
+        </div>
+
         <div className="mt-5 flex justify-center">
-          <div className="rounded-full bg-coral/10 px-3.5 py-1.5 text-[13px] font-semibold text-coral-deep">
+          <div className="rounded-full bg-coral/10 px-3.5 py-1.5 text-[12px] font-semibold text-coral-deep">
             🔥 연속 {state.streak}일
           </div>
         </div>
@@ -72,30 +102,24 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
 
       {/* Card stack — 12px rhythm */}
       <div className="space-y-3">
+        {/* 오늘의 변화 (placebo) */}
         <div className="surface-card rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[12px] text-muted-foreground mb-1">절약한 술값</p>
-              <p className="text-[22px] font-extrabold gold-text leading-none">{formatWon(state.totalSaved)}</p>
-            </div>
-            <div className="size-11 rounded-full bg-gradient-gold flex items-center justify-center text-white font-bold shadow-gold">
-              ₩
-            </div>
-          </div>
-          {gift && (
-            <div className="mt-4 pt-4 border-t border-border/70">
-              <p className="text-[11px] text-coral font-bold mb-1 tracking-wider">오늘의 선물</p>
-              <p className="text-[14px] font-semibold text-foreground/85">{gift}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="surface-card rounded-2xl p-5">
-          <p className="text-[11px] text-coral font-bold mb-2 tracking-wider">오늘의 메시지</p>
-          <p className="text-[15px] font-semibold leading-relaxed text-foreground/90">
-            {dayMessage(day || 1)}
+          <p className="text-[11px] text-mint-deep font-bold mb-2 tracking-wider">오늘 몸에서</p>
+          <p className="text-[16px] font-extrabold leading-snug text-foreground/95">
+            {change.headline}
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+            {change.detail}
           </p>
         </div>
+
+        {/* 오늘의 선물 */}
+        {gift && (
+          <div className="surface-card rounded-2xl p-5">
+            <p className="text-[11px] text-coral font-bold mb-2 tracking-wider">오늘의 선물</p>
+            <p className="text-[15px] font-semibold text-foreground/90">{gift}</p>
+          </div>
+        )}
 
         <div className="surface-card rounded-2xl px-5 py-4">
           <p className="text-[14px] font-semibold text-foreground/80">
