@@ -4,19 +4,21 @@ import { CheckInDoneScreen } from "@/components/screens/CheckInDoneScreen";
 import { MilestoneScreen } from "@/components/screens/MilestoneScreen";
 import { MilestonesListScreen } from "@/components/screens/MilestonesListScreen";
 import { CrisisScreen } from "@/components/screens/CrisisScreen";
+import { OnboardingScreen } from "@/components/screens/OnboardingScreen";
 import {
+  getSavePerDay,
   isMilestone,
   loadCrisisSession,
   loadState,
   recordMilestone,
   saveState,
-  SAVE_PER_DAY,
   SobrietyState,
   todayKey,
   LastView,
 } from "@/lib/sobriety";
+import { initReminder, ReminderConfig } from "@/lib/reminder";
 
-type View = LastView | "milestones-list" | "crisis";
+type View = LastView | "milestones-list" | "crisis" | "onboarding";
 
 const Index = () => {
   const [state, setState] = useState<SobrietyState | null>(null);
@@ -28,15 +30,21 @@ const Index = () => {
     const loaded = loadState();
     setState(loaded);
 
-    // 1) 위기 세션이 진행 중이면 무조건 그 화면으로 복원
-    const crisis = loadCrisisSession();
-    if (crisis) {
-      setView("crisis");
-    } else if (loaded.lastCheckInDate === todayKey() && loaded.lastView) {
-      // 2) 오늘 이미 체크인 했으면 마지막 화면 복원
-      setView(loaded.lastView);
+    if (!loaded.onboarded) {
+      setView("onboarding");
     } else {
-      setView("main");
+      // 1) 위기 세션이 진행 중이면 무조건 그 화면으로 복원
+      const crisis = loadCrisisSession();
+      if (crisis) {
+        setView("crisis");
+      } else if (loaded.lastCheckInDate === todayKey() && loaded.lastView) {
+        // 2) 오늘 이미 체크인 했으면 마지막 화면 복원
+        setView(loaded.lastView);
+      } else {
+        setView("main");
+      }
+      // 알림 스케줄 시작
+      initReminder();
     }
 
     // Trigger fade-in next tick
@@ -61,10 +69,25 @@ const Index = () => {
     const base = nextState ?? state;
     // Only persist LastView types
     const persistView: LastView =
-      v === "milestones-list" || v === "crisis" ? "main" : (v as LastView);
+      v === "milestones-list" || v === "crisis" || v === "onboarding"
+        ? "main"
+        : (v as LastView);
     const merged: SobrietyState = { ...base, lastView: persistView };
     setState(merged);
     saveState(merged);
+  };
+
+  const handleOnboardingDone = (data: { savePerDay: number; reminder: ReminderConfig | null }) => {
+    const next: SobrietyState = {
+      ...state,
+      savePerDay: data.savePerDay,
+      onboarded: true,
+      lastView: "main",
+    };
+    setState(next);
+    saveState(next);
+    setView("main");
+    if (data.reminder?.enabled) initReminder();
   };
 
   const handleCheckIn = () => {
@@ -74,11 +97,12 @@ const Index = () => {
       setTimeout(() => setAlreadyToday(false), 2200);
       return;
     }
+    const perDay = getSavePerDay(state);
     const next: SobrietyState = {
       ...state,
       streak: state.streak + 1,
       totalDays: state.totalDays + 1,
-      totalSaved: state.totalSaved + SAVE_PER_DAY,
+      totalSaved: state.totalSaved + perDay,
       lastCheckInDate: today,
     };
     const reachedMilestone = isMilestone(next.totalDays);
@@ -101,6 +125,9 @@ const Index = () => {
       style={{ opacity: mounted ? 1 : 0 }}
     >
       <div key={view} className="view-enter">
+        {view === "onboarding" && (
+          <OnboardingScreen onDone={handleOnboardingDone} />
+        )}
         {view === "main" && (
           <MainScreen
             state={state}
