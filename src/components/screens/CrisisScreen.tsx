@@ -229,7 +229,6 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
             {truth}
           </p>
         </div>
-        </div>
 
         <button
           onClick={() => updateStep("alt")}
