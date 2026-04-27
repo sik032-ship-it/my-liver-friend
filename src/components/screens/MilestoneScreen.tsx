@@ -78,53 +78,58 @@ export const MilestoneScreen = ({ state, onClose }: Props) => {
     <div className="app-shell px-5 pt-12 pb-10 relative animate-fade-in" style={{ background: "linear-gradient(180deg, hsl(var(--cream)), hsl(22 100% 90%))" }}>
       <Confetti count={28} />
 
-      <div ref={captureRef} className="px-1 pt-2 pb-4">
-        <p className="text-center text-xl font-bold animate-fade-up">축하해요! ✦</p>
+      {/* SNS-shareable square card */}
+      <div
+        ref={captureRef}
+        className="relative rounded-[32px] overflow-hidden shadow-card-lg"
+        style={{
+          background:
+            "linear-gradient(160deg, hsl(var(--cream)) 0%, hsl(var(--cream-deep)) 55%, hsl(var(--mint-soft)) 100%)",
+          aspectRatio: "1 / 1",
+        }}
+      >
+        <div
+          className="absolute -top-16 -right-16 w-56 h-56 rounded-full opacity-50 blur-3xl"
+          style={{ background: "hsl(var(--mint) / 0.4)" }}
+        />
+        <div
+          className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full opacity-40 blur-3xl"
+          style={{ background: "hsl(var(--gold-light) / 0.4)" }}
+        />
 
-        <div className="text-center mt-2 animate-fade-up" style={{ animationDelay: "80ms" }}>
-          <p
-            className="gold-text font-black animate-glow leading-none"
-            style={{ fontSize: 148, letterSpacing: "-0.06em" }}
-          >
-            {day}
-          </p>
-          <p className="text-lg font-bold text-foreground/80 mt-1">일 연속 금주 달성</p>
-        </div>
-
-        <div className="relative my-6 flex justify-center">
-          <div className="animate-bounce-soft">
-            <LiverMascot mood="starry" size={180} />
+        <div className="relative h-full w-full flex flex-col items-center justify-between px-7 py-7">
+          <div className="self-stretch flex items-center justify-between">
+            <p className="text-[11px] font-bold tracking-[0.3em] text-foreground/60">SOBER · DAY</p>
+            <p className="text-[11px] font-bold tracking-wider mint-text">CLEAN ✦</p>
           </div>
-          {[
-            { top: "10%", left: "18%", d: "0s" },
-            { top: "20%", right: "16%", d: "0.4s" },
-            { top: "60%", left: "10%", d: "0.8s" },
-            { top: "55%", right: "12%", d: "1.1s" },
-            { top: "0%", left: "48%", d: "0.6s" },
-          ].map((s, i) => (
-            <span
-              key={i}
-              className="absolute text-2xl animate-sparkle-float"
-              style={{ ...(s as React.CSSProperties), animationDelay: s.d, color: "hsl(var(--gold-light))" }}
+
+          <div className="text-center">
+            <p
+              className="gold-text font-black leading-none animate-glow"
+              style={{ fontSize: 168, letterSpacing: "-0.07em" }}
             >
-              ✦
-            </span>
-          ))}
-        </div>
-
-        <div className="flex justify-center animate-fade-up" style={{ animationDelay: "200ms" }}>
-          <div className="gold-pill rounded-full px-5 py-2.5 font-extrabold">
-            절약 {formatWon(state.totalSaved)}
+              {day}
+            </p>
+            <p className="mt-2 text-[15px] font-bold text-foreground/75 tracking-wide">
+              days alcohol-free
+            </p>
           </div>
-        </div>
 
-        <div className="mt-6 glass-card rounded-3xl p-5 animate-fade-up" style={{ animationDelay: "260ms" }}>
-          <p className="text-xs font-bold tracking-widest text-coral mb-3">되찾은 것들</p>
-          <ul className="space-y-2.5 text-[15px] font-semibold text-foreground/85">
-            <li className="flex justify-between"><span>☀ 맑은 아침</span><span>{day}번</span></li>
-            <li className="flex justify-between"><span>☾ 깊은 수면</span><span>{day}번</span></li>
-            <li className="flex justify-between"><span>✿ 여유로운 저녁</span><span>{day}번</span></li>
-          </ul>
+          <div className="animate-bounce-soft">
+            <LiverMascot mood="starry" size={120} stage="halo" />
+          </div>
+
+          <div className="self-stretch flex items-end justify-between">
+            <div>
+              <p className="text-[10px] font-bold tracking-widest text-muted-foreground mb-0.5">SAVED</p>
+              <p className="text-[18px] font-extrabold gold-text leading-none">
+                {formatWon(state.totalSaved)}
+              </p>
+            </div>
+            <p className="text-[11px] font-bold text-foreground/60 tracking-wider">
+              @간지키고돈벌고
+            </p>
+          </div>
         </div>
       </div>
 
