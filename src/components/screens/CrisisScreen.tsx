@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LiverMascot } from "@/components/LiverMascot";
-import { formatWon, SobrietyState } from "@/lib/sobriety";
+import {
+  clearCrisisSession,
+  computeCrisisLoss,
+  CrisisSession,
+  CrisisStep,
+  formatWon,
+  loadCrisisSession,
+  saveCrisisSession,
+  SobrietyState,
+} from "@/lib/sobriety";
 
 interface Props {
   state: SobrietyState;
-  onSurvive: () => void; // 5분 이겨낸 후 체크인
-  onRelapse: () => void; // 결국 마심
-  onClose: () => void;   // 그냥 닫기 (메인으로)
+  onSurvive: () => void;
+  onRelapse: () => void;
+  onClose: () => void; // 메인으로 (세션은 유지)
 }
 
 const HARD_TRUTHS = [
@@ -29,80 +38,160 @@ const ALTERNATIVES = [
   "🛁 뜨거운 물에 샤워하고 일찍 자보세요. 내일 아침 거울 속 내 얼굴이 달라요.",
 ];
 
-const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+const TIMER_MS = 5 * 60 * 1000;
+const HALF_REMAINING_MS = 2.5 * 60 * 1000;
 
-type Step = "truth" | "alt" | "timer" | "won" | "fail";
-
-const TIMER_SECONDS = 5 * 60;
+const initSession = (): CrisisSession => {
+  const existing = loadCrisisSession();
+  if (existing) return existing;
+  const fresh: CrisisSession = {
+    step: "truth",
+    truthIdx: Math.floor(Math.random() * HARD_TRUTHS.length),
+    altIdx: Math.floor(Math.random() * ALTERNATIVES.length),
+    timerEndAt: null,
+    startedAt: Date.now(),
+  };
+  saveCrisisSession(fresh);
+  return fresh;
+};
 
 export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) => {
-  const [step, setStep] = useState<Step>("truth");
-  const [seconds, setSeconds] = useState(TIMER_SECONDS);
-  const [halfShown, setHalfShown] = useState(false);
+  const sessionRef = useRef<CrisisSession>(initSession());
+  const [step, setStep] = useState<CrisisStep>(sessionRef.current.step);
+  const [now, setNow] = useState(Date.now());
   const [confirmingFail, setConfirmingFail] = useState(false);
-  const truth = useMemo(() => pick(HARD_TRUTHS), []);
-  const alt = useMemo(() => pick(ALTERNATIVES), []);
-  const truthTimer = useRef<number | null>(null);
-
-  // Step 1: hard truth — auto-advance after 3s, but allow manual continue after delay
   const [canContinue, setCanContinue] = useState(false);
+
+  const truth = HARD_TRUTHS[sessionRef.current.truthIdx];
+  const alt = ALTERNATIVES[sessionRef.current.altIdx];
+  const loss = useMemo(() => computeCrisisLoss(state), [state]);
+
+  // Persist step changes
+  const updateStep = (next: CrisisStep, extra?: Partial<CrisisSession>) => {
+    sessionRef.current = { ...sessionRef.current, step: next, ...extra };
+    saveCrisisSession(sessionRef.current);
+    setStep(next);
+  };
+
+  // Step 1: 3-second hold (anchor-based so backgrounding still counts)
   useEffect(() => {
-    if (step !== "truth") return;
-    setCanContinue(false);
-    truthTimer.current = window.setTimeout(() => setCanContinue(true), 3000);
+    if (step !== "truth") {
+      setCanContinue(false);
+      return;
+    }
+    const elapsed = Date.now() - sessionRef.current.startedAt;
+    if (elapsed >= 3000) {
+      setCanContinue(true);
+      return;
+    }
+    const id = window.setTimeout(() => setCanContinue(true), 3000 - elapsed);
+    return () => window.clearTimeout(id);
+  }, [step]);
+
+  // Timer tick — anchor-based using timerEndAt, so background time still counts
+  useEffect(() => {
+    if (step !== "timer") return;
+    if (!sessionRef.current.timerEndAt) {
+      const endAt = Date.now() + TIMER_MS;
+      sessionRef.current = { ...sessionRef.current, timerEndAt: endAt };
+      saveCrisisSession(sessionRef.current);
+    }
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    const onVis = () => setNow(Date.now());
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
     return () => {
-      if (truthTimer.current) window.clearTimeout(truthTimer.current);
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onVis);
     };
   }, [step]);
 
-  // Step 3: countdown
+  // Auto-advance when timer hits zero
+  const remainingMs = sessionRef.current.timerEndAt
+    ? Math.max(0, sessionRef.current.timerEndAt - now)
+    : TIMER_MS;
   useEffect(() => {
-    if (step !== "timer") return;
-    if (seconds <= 0) {
-      setStep("won");
-      return;
+    if (step === "timer" && remainingMs <= 0) {
+      updateStep("won");
     }
-    const id = window.setTimeout(() => setSeconds((s) => s - 1), 1000);
-    return () => window.clearTimeout(id);
-  }, [step, seconds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, remainingMs]);
 
-  useEffect(() => {
-    if (step === "timer" && seconds <= 150 && !halfShown) setHalfShown(true);
-  }, [step, seconds, halfShown]);
+  const totalSec = Math.ceil(remainingMs / 1000);
+  const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+  const ss = String(totalSec % 60).padStart(2, "0");
+  const halfShown = step === "timer" && remainingMs <= HALF_REMAINING_MS && remainingMs > 0;
 
-  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
+  const handleSurvive = () => {
+    clearCrisisSession();
+    onSurvive();
+  };
+  const handleRelapse = () => {
+    clearCrisisSession();
+    onRelapse();
+  };
 
-  // ---------- Step 1: 현실 직면 (어두운 배경) ----------
+  // ---------- Step 1: 현실 직면 ----------
   if (step === "truth") {
     return (
-      <div className="app-shell min-h-screen flex flex-col px-6 pt-16 pb-10 animate-fade-in"
-        style={{ background: "linear-gradient(180deg, hsl(220 30% 10%), hsl(220 35% 6%))" }}>
-        <div className="flex-1 flex flex-col justify-center gap-8 text-white">
-          {state.streak >= 1 && (
-            <div className="space-y-4">
-              <p className="text-4xl font-extrabold leading-tight">
+      <div
+        className="app-shell min-h-screen flex flex-col px-6 pt-14 pb-8 animate-fade-in"
+        style={{ background: "linear-gradient(180deg, hsl(220 30% 10%), hsl(220 35% 6%))" }}
+      >
+        <button
+          onClick={onClose}
+          aria-label="닫기"
+          className="self-end text-white/50 text-sm mb-2"
+        >
+          닫기
+        </button>
+
+        <div className="flex-1 flex flex-col justify-center gap-7 text-white">
+          {loss.daysLost >= 1 && (
+            <div className="space-y-3">
+              <p className="text-[40px] font-extrabold leading-[1.1]">
                 지금 마시면<br />
-                <span className="text-coral" style={{ color: "hsl(var(--coral))" }}>
-                  {state.streak}일이 0이 돼요.
+                <span style={{ color: "hsl(var(--coral))" }}>
+                  {loss.daysLost}일이 0이 돼요.
                 </span>
               </p>
-              <p className="text-2xl font-bold leading-snug text-white/90">
-                <span style={{ color: "hsl(var(--gold-light))" }}>
-                  {formatWon(state.totalSaved)}
-                </span>
-                {" "}이 오늘 밤 사라져요.
-              </p>
+              {loss.daysToNextMilestone !== null && loss.daysToNextMilestone <= 14 && (
+                <p className="text-base text-white/70">
+                  다음 마일스톤 <b className="text-white">{loss.nextMilestoneDay}일</b>까지
+                  {" "}딱 <b className="text-white">{loss.daysToNextMilestone}일</b> 남았는데요.
+                </p>
+              )}
             </div>
           )}
+
+          <div className="space-y-2">
+            <p className="text-2xl font-bold leading-snug text-white/90">
+              <span style={{ color: "hsl(var(--gold-light))" }}>
+                {formatWon(loss.moneyLost)}
+              </span>
+              {" "}이 오늘 밤 사라져요.
+            </p>
+            {state.totalSaved > 0 && (
+              <p className="text-sm text-white/55">
+                지금까지 모은 {formatWon(state.totalSaved)}에 더해질 수 있던 돈이에요.
+              </p>
+            )}
+            <p className="text-sm text-white/55">
+              주 2회 × 1년이면 <b className="text-white/85">{formatWon(loss.yearlyProjection)}</b>.
+            </p>
+          </div>
+
           <div className="h-px bg-white/15" />
+
           <p className="text-xl font-semibold leading-relaxed text-white/95">
             {truth}
           </p>
         </div>
 
         <button
-          onClick={() => setStep("alt")}
+          onClick={() => updateStep("alt")}
           disabled={!canContinue}
           className="w-full h-14 rounded-2xl bg-white text-foreground text-base font-bold disabled:opacity-30 transition-opacity"
         >
@@ -112,10 +201,17 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
     );
   }
 
-  // ---------- Step 2: 솔깃한 대안 ----------
+  // ---------- Step 2: 대안 ----------
   if (step === "alt") {
     return (
       <div className="app-shell bg-gradient-cream px-5 pt-12 pb-10 min-h-screen flex flex-col animate-fade-in">
+        <button
+          onClick={onClose}
+          aria-label="닫기"
+          className="self-end text-muted-foreground text-sm mb-2"
+        >
+          닫기
+        </button>
         <div className="flex-1 flex flex-col justify-center">
           <p className="text-sm tracking-wider font-bold text-coral mb-3">오늘 술값 대신</p>
           <h2 className="text-3xl font-extrabold text-foreground/90 mb-8 leading-snug">
@@ -132,7 +228,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
         </div>
         <div className="space-y-3">
           <button
-            onClick={() => setStep("timer")}
+            onClick={() => updateStep("timer", { timerEndAt: Date.now() + TIMER_MS })}
             className="w-full h-14 rounded-2xl bg-gradient-mint text-white text-lg font-bold shadow-mint active:scale-[0.98] transition-transform"
           >
             5분만 버텨볼게요
@@ -150,9 +246,20 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
 
   // ---------- Step 3: 타이머 ----------
   if (step === "timer") {
-    const progress = 1 - seconds / TIMER_SECONDS;
+    const progress = 1 - remainingMs / TIMER_MS;
     return (
       <div className="app-shell bg-gradient-cream px-5 pt-10 pb-8 min-h-screen flex flex-col animate-fade-in">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-xs text-muted-foreground">위기 모드 진행 중</span>
+          <button
+            onClick={onClose}
+            aria-label="잠시 닫기"
+            className="text-muted-foreground text-sm"
+          >
+            잠시 닫기
+          </button>
+        </div>
+
         <div className="text-center mb-6">
           <p className="text-base font-semibold text-foreground/80">
             충동은 보통 5분이면 지나가요.
@@ -174,7 +281,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
 
         <div className="h-2 rounded-full bg-white/60 overflow-hidden mb-6">
           <div
-            className="h-full bg-gradient-mint transition-all duration-1000"
+            className="h-full bg-gradient-mint transition-all duration-300"
             style={{ width: `${progress * 100}%` }}
           />
         </div>
@@ -208,7 +315,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
                   더 버틸게요
                 </button>
                 <button
-                  onClick={() => setStep("fail")}
+                  onClick={() => updateStep("fail")}
                   className="flex-1 h-11 rounded-xl bg-muted text-foreground/70 font-semibold"
                 >
                   네, 마실래요
@@ -237,7 +344,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
           </p>
         </div>
         <button
-          onClick={onSurvive}
+          onClick={handleSurvive}
           className="w-full h-14 rounded-2xl bg-gradient-mint text-white text-lg font-bold shadow-mint animate-pulse-soft active:scale-[0.98] transition-transform"
         >
           오늘도 안 마셨어요
@@ -246,7 +353,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
     );
   }
 
-  // ---------- Step 4b: 졌다 (자괴감 없이) ----------
+  // ---------- Step 4b: 졌다 ----------
   return (
     <div className="app-shell bg-gradient-cream px-5 pt-16 pb-10 min-h-screen flex flex-col animate-fade-in">
       <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -261,7 +368,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
         </p>
       </div>
       <button
-        onClick={onRelapse}
+        onClick={handleRelapse}
         className="w-full h-14 rounded-2xl bg-foreground/85 text-background text-base font-bold active:scale-[0.98] transition-transform"
       >
         닫기
