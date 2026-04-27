@@ -118,7 +118,23 @@ export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones, onCr
       <div className="space-y-3">
         {/* 오늘의 변화 (placebo) */}
         <div className="surface-card rounded-2xl p-5">
-          <p className="text-[11px] text-mint-deep font-bold mb-2 tracking-wider">오늘 몸에서</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] text-mint-deep font-bold tracking-wider">오늘 몸에서</p>
+            <button
+              onClick={handleLike}
+              aria-label="이 메시지 공감"
+              className={`size-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+                liked ? "bg-coral/15" : "bg-muted hover:bg-muted/70"
+              }`}
+            >
+              <Heart
+                size={16}
+                strokeWidth={2.4}
+                className={liked ? "fill-coral" : ""}
+                style={{ color: liked ? "hsl(var(--coral))" : "hsl(var(--muted-foreground))" }}
+              />
+            </button>
+          </div>
           <p className="text-[16px] font-extrabold leading-snug text-foreground/95">
             {change.headline}
           </p>
