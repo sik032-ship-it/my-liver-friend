@@ -398,6 +398,9 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
               누적 절약 {formatWon(state.totalSaved)}
             </p>
           )}
+          <p className="mt-3 text-[11px] font-bold text-foreground/50 tracking-wider">
+            @간지키고돈벌고
+          </p>
         </div>
 
         <button
