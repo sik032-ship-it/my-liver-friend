@@ -70,3 +70,71 @@ export const dayMessage = (day: number): string => {
 };
 
 export const formatWon = (n: number) => `₩${n.toLocaleString("ko-KR")}`;
+
+export const timeGreeting = (): string => {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return "좋은 아침이에요, 오늘도 맑은 하루 ☀";
+  if (h >= 12 && h < 18) return "오후도 힘내요 ✿";
+  if (h >= 18 && h < 23) return "오늘 하루도 잘 버텼어요 ☾";
+  return "이 시간에도 찾아와줬네요 ✦";
+};
+
+export type HealthStage = "pale" | "recovering" | "vibrant" | "sparkle" | "halo";
+
+export const healthStage = (days: number): HealthStage => {
+  if (days <= 3) return "pale";
+  if (days <= 7) return "recovering";
+  if (days <= 14) return "vibrant";
+  if (days <= 30) return "sparkle";
+  return "halo";
+};
+
+export type GiftMsg = { threshold: number; text: string };
+const GIFTS: GiftMsg[] = [
+  { threshold: 5, text: "카페라떼 한 잔 살 수 있어요 ☕" },
+  { threshold: 10, text: "맛있는 점심 한 끼 값 🍜" },
+  { threshold: 20, text: "좋아하는 사람에게 작은 선물 🎁" },
+  { threshold: 30, text: "새 운동화 한 켤레 👟" },
+  { threshold: 60, text: "주말 여행 한 번 🚗" },
+  { threshold: 100, text: "나를 위한 특별한 경험 ✨" },
+];
+
+export const currentGift = (days: number): string | null => {
+  let msg: string | null = null;
+  for (const g of GIFTS) {
+    if (days >= g.threshold) msg = g.text;
+  }
+  return msg;
+};
+
+// Companion counter — simulated, stable per day
+export const companionCount = (): { active: number; checkedIn: number } => {
+  const d = todayKey();
+  let seed = 0;
+  for (let i = 0; i < d.length; i++) seed = (seed * 31 + d.charCodeAt(i)) >>> 0;
+  const rand = (mod: number, salt: number) => ((seed ^ (salt * 2654435761)) >>> 0) % mod;
+  const active = 12000 + rand(4000, 1);
+  const checkedIn = 3200 + rand(1500, 7);
+  return { active, checkedIn };
+};
+
+// Milestone history
+export type MilestoneRecord = { day: number; date: string; saved: number };
+export const MILESTONE_HISTORY_KEY = "sobriety_milestones_v1";
+
+export const loadMilestones = (): MilestoneRecord[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(MILESTONE_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const recordMilestone = (day: number, saved: number) => {
+  const list = loadMilestones();
+  if (list.find((m) => m.day === day)) return;
+  list.push({ day, date: todayKey(), saved });
+  localStorage.setItem(MILESTONE_HISTORY_KEY, JSON.stringify(list));
+};

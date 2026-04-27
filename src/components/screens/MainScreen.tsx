@@ -1,29 +1,53 @@
 import { useState } from "react";
+import { Trophy } from "lucide-react";
 import { LiverMascot } from "@/components/LiverMascot";
-import { dayMessage, formatWon, SobrietyState, todayLabel } from "@/lib/sobriety";
+import {
+  companionCount,
+  currentGift,
+  dayMessage,
+  formatWon,
+  healthStage,
+  SobrietyState,
+  timeGreeting,
+  todayLabel,
+} from "@/lib/sobriety";
 
 interface Props {
   state: SobrietyState;
   onCheckIn: () => void;
   onRelapse: () => void;
+  onOpenMilestones: () => void;
 }
 
-export const MainScreen = ({ state, onCheckIn, onRelapse }: Props) => {
+export const MainScreen = ({ state, onCheckIn, onRelapse, onOpenMilestones }: Props) => {
   const [confirming, setConfirming] = useState(false);
   const day = state.totalDays;
+  const stage = healthStage(day);
+  const gift = currentGift(day);
+  const { active, checkedIn } = companionCount();
 
   return (
     <div className="app-shell bg-gradient-cream px-5 pt-10 pb-12">
-      {/* Greeting */}
-      <header className="mb-6 animate-fade-in">
-        <p className="text-xl font-semibold text-foreground/90">안녕, 오늘도 맑은 하루 ✿</p>
-        <p className="mt-1 text-sm text-muted-foreground">{todayLabel()}</p>
+      {/* Greeting + Trophy */}
+      <header className="mb-6 animate-fade-in flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xl font-semibold text-foreground/90 leading-snug">{timeGreeting()}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{todayLabel()}</p>
+        </div>
+        <button
+          onClick={onOpenMilestones}
+          aria-label="마일스톤 보기"
+          className="size-11 shrink-0 rounded-2xl glass-card flex items-center justify-center text-gold-deep hover:scale-105 active:scale-95 transition-transform"
+          style={{ color: "hsl(var(--gold-deep))" }}
+        >
+          <Trophy size={22} strokeWidth={2.4} />
+        </button>
       </header>
 
       {/* Mascot */}
       <div className="mb-2 flex justify-center">
         <div className="animate-bounce-soft">
-          <LiverMascot mood="happy" size={200} />
+          <LiverMascot mood="happy" size={200} stage={stage} />
         </div>
       </div>
 
@@ -41,14 +65,22 @@ export const MainScreen = ({ state, onCheckIn, onRelapse }: Props) => {
       </div>
 
       {/* Saved money card */}
-      <div className="glass-card rounded-3xl p-5 mt-6 flex items-center justify-between animate-fade-up">
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">절약한 술값</p>
-          <p className="text-2xl font-extrabold gold-text">{formatWon(state.totalSaved)}</p>
+      <div className="glass-card rounded-3xl p-5 mt-6 animate-fade-up">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">절약한 술값</p>
+            <p className="text-2xl font-extrabold gold-text">{formatWon(state.totalSaved)}</p>
+          </div>
+          <div className="size-12 rounded-full bg-gradient-gold flex items-center justify-center text-white font-bold shadow-gold">
+            ₩
+          </div>
         </div>
-        <div className="size-12 rounded-full bg-gradient-gold flex items-center justify-center text-white font-bold shadow-gold">
-          ₩
-        </div>
+        {gift && (
+          <div className="mt-3 pt-3 border-t border-border/60">
+            <p className="text-xs text-coral font-bold mb-1 tracking-wider">오늘의 선물</p>
+            <p className="text-sm font-semibold text-foreground/85">{gift}</p>
+          </div>
+        )}
       </div>
 
       {/* Today's message */}
@@ -106,6 +138,18 @@ export const MainScreen = ({ state, onCheckIn, onRelapse }: Props) => {
           </div>
         </div>
       )}
+
+      {/* Companion counter */}
+      <div className="mt-8 text-center animate-fade-up" style={{ animationDelay: "160ms" }}>
+        <div className="inline-flex flex-col items-center gap-1 px-5 py-3 rounded-2xl bg-white/50 border border-white/70 backdrop-blur">
+          <p className="text-sm font-semibold text-foreground/80">
+            지금 <span className="mint-text font-extrabold">{active.toLocaleString("ko-KR")}</span>명이 함께 금주 중
+          </p>
+          <p className="text-xs text-muted-foreground">
+            오늘 체크인 완료한 사람 {checkedIn.toLocaleString("ko-KR")}명
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
