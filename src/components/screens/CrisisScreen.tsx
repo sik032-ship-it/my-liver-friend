@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
 import { LiverMascot } from "@/components/LiverMascot";
 import {
   clearCrisisSession,
@@ -61,6 +62,8 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
   const [now, setNow] = useState(Date.now());
   const [confirmingFail, setConfirmingFail] = useState(false);
   const [canContinue, setCanContinue] = useState(false);
+  const wonCaptureRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
 
   const truth = HARD_TRUTHS[sessionRef.current.truthIdx];
   const alt = ALTERNATIVES[sessionRef.current.altIdx];
@@ -133,6 +136,47 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
     onRelapse();
   };
 
+  const saveWinImage = async () => {
+    if (!wonCaptureRef.current || saving) return;
+    setSaving(true);
+    try {
+      const canvas = await html2canvas(wonCaptureRef.current, {
+        backgroundColor: "#FFF8F0",
+        scale: 2,
+        useCORS: true,
+      });
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const fontSize = 20 * 2;
+        ctx.font = `bold ${fontSize}px Pretendard, sans-serif`;
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.textAlign = "center";
+        ctx.fillText("간 지키고 돈 벌고", canvas.width / 2, canvas.height - 24);
+      }
+      const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/png"));
+      if (!blob) throw new Error("blob fail");
+      const file = new File([blob], `crisis-win-${state.streak}days.png`, { type: "image/png" });
+      const navAny = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (navAny.share && navAny.canShare && navAny.canShare({ files: [file] })) {
+        await navAny.share({ files: [file], title: "5분의 승리" });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("이미지 저장에 실패했어요");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ---------- Step 1: 현실 직면 ----------
   if (step === "truth") {
     return (
@@ -149,7 +193,7 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
         </button>
 
         <div className="flex-1 flex flex-col justify-center gap-7 text-white">
-          {loss.daysLost >= 1 && (
+          {loss.daysLost >= 1 ? (
             <div className="space-y-3">
               <p className="text-[40px] font-extrabold leading-[1.1]">
                 지금 마시면<br />
@@ -157,12 +201,28 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
                   {loss.daysLost}일이 0이 돼요.
                 </span>
               </p>
+              {loss.daysLost >= 7 && (
+                <p className="text-base text-white/70">
+                  {loss.daysLost}일 동안 {loss.daysLost}번의 맑은 아침을 되찾았는데,
+                  <br />그게 오늘 밤 한 번에 사라져요.
+                </p>
+              )}
               {loss.daysToNextMilestone !== null && loss.daysToNextMilestone <= 14 && (
                 <p className="text-base text-white/70">
                   다음 마일스톤 <b className="text-white">{loss.nextMilestoneDay}일</b>까지
                   {" "}딱 <b className="text-white">{loss.daysToNextMilestone}일</b> 남았는데요.
                 </p>
               )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[36px] font-extrabold leading-[1.15]">
+                여기서 마시면<br />
+                <span style={{ color: "hsl(var(--coral))" }}>다시 0일부터예요.</span>
+              </p>
+              <p className="text-base text-white/70">
+                시작이 가장 어려워요. 오늘 한 번만 더 버텨봐요.
+              </p>
             </div>
           )}
 
@@ -173,13 +233,23 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
               </span>
               {" "}이 오늘 밤 사라져요.
             </p>
-            {state.totalSaved > 0 && (
+            {state.totalSaved > 0 ? (
               <p className="text-sm text-white/55">
-                지금까지 모은 {formatWon(state.totalSaved)}에 더해질 수 있던 돈이에요.
+                지금까지 {formatWon(state.totalSaved)} 모았어요.
+                {state.totalSaved >= loss.moneyLost
+                  ? ` 오늘 마시면 그중 ${Math.round((loss.moneyLost / state.totalSaved) * 100)}%가 한 번에 날아가요.`
+                  : " 한 번의 술자리가 그 모든 노력보다 비싸요."}
+              </p>
+            ) : (
+              <p className="text-sm text-white/55">
+                오늘 안 마시면 그게 첫 5,000원이 돼요.
               </p>
             )}
             <p className="text-sm text-white/55">
               주 2회 × 1년이면 <b className="text-white/85">{formatWon(loss.yearlyProjection)}</b>.
+              {state.totalSaved > 0 && loss.daysLost > 0 && (
+                <> 지금 페이스면 1년 뒤 <b className="text-white/85">{formatWon(Math.round((state.totalSaved / Math.max(loss.daysLost, 1)) * 365))}</b>.</>
+              )}
             </p>
           </div>
 
@@ -330,22 +400,54 @@ export const CrisisScreen = ({ state, onSurvive, onRelapse, onClose }: Props) =>
 
   // ---------- Step 4a: 이겼다 ----------
   if (step === "won") {
+    const elapsedMin = Math.max(
+      5,
+      Math.round((Date.now() - sessionRef.current.startedAt) / 60000),
+    );
     return (
-      <div className="app-shell bg-gradient-cream px-5 pt-16 pb-10 min-h-screen flex flex-col animate-fade-in">
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="animate-bounce-soft mb-6">
-            <LiverMascot mood="starry" size={210} stage="halo" />
+      <div className="app-shell bg-gradient-cream px-5 pt-12 pb-8 min-h-screen flex flex-col animate-fade-in">
+        <div
+          ref={wonCaptureRef}
+          className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6"
+          style={{ background: "linear-gradient(180deg, hsl(var(--cream)), hsl(22 100% 92%))", borderRadius: 28 }}
+        >
+          <p className="text-xs tracking-[0.25em] font-bold text-coral mb-2">CRISIS · WIN</p>
+          <div className="animate-bounce-soft mb-5">
+            <LiverMascot mood="starry" size={200} stage="halo" />
           </div>
-          <h2 className="text-3xl font-extrabold mint-text mb-3 leading-snug">
-            이겨냈어요.
+          <h2 className="text-4xl font-extrabold mint-text mb-3 leading-snug">
+            5분, 이겨냈어요.
           </h2>
-          <p className="text-lg font-semibold text-foreground/85">
+          <p className="text-base font-semibold text-foreground/80 mb-5">
             오늘도 당신이 이겼어요.
           </p>
+          <div className="flex gap-2">
+            {state.streak > 0 && (
+              <div className="gold-pill rounded-full px-4 py-2 font-extrabold text-sm">
+                {state.streak}일 지킴
+              </div>
+            )}
+            <div className="rounded-full px-4 py-2 font-extrabold text-sm bg-foreground/85 text-background">
+              +{elapsedMin}분 충동 이김
+            </div>
+          </div>
+          {state.totalSaved > 0 && (
+            <p className="mt-4 text-sm font-semibold text-foreground/70">
+              누적 절약 {formatWon(state.totalSaved)}
+            </p>
+          )}
         </div>
+
+        <button
+          onClick={saveWinImage}
+          disabled={saving}
+          className="mt-5 w-full h-13 py-4 rounded-2xl bg-foreground text-background font-bold active:scale-[0.98] transition disabled:opacity-60"
+        >
+          {saving ? "저장 중..." : "승리 이미지로 저장 / 공유"}
+        </button>
         <button
           onClick={handleSurvive}
-          className="w-full h-14 rounded-2xl bg-gradient-mint text-white text-lg font-bold shadow-mint animate-pulse-soft active:scale-[0.98] transition-transform"
+          className="mt-3 w-full h-14 rounded-2xl bg-gradient-mint text-white text-lg font-bold shadow-mint animate-pulse-soft active:scale-[0.98] transition-transform"
         >
           오늘도 안 마셨어요
         </button>
